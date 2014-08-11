@@ -20,13 +20,26 @@ public class EdgeDetectionDemo {
         for (double lambda = 5; lambda <100; lambda+=10) {
             double sigma = lambda;
             Size size = new Size(2*sigma, 2*sigma);
-            for (double orientation = 0; orientation < 2*Math.PI; orientation+=Math.PI/4) {
+            Mat outputForThisScale = new Mat(inputImage64.height(), inputImage64.width(), inputImage64.depth());
+            for (double orientation = 0; orientation < 2*Math.PI; orientation+=Math.PI/8) {
                 Mat kernel = Imgproc.getGaborKernel(size, sigma, orientation, lambda, 1);
                 Mat output = new Mat();
                 Imgproc.filter2D(inputImage64, output, inputImage64.depth(), kernel);
-                Core.add(result, output, result);
+                Core.max(output, outputForThisScale, outputForThisScale);
             }
+            String outputFilename = "resources/output_" + String.valueOf(lambda) + ".png";
+            Highgui.imwrite(outputFilename, result);
+            Core.add(result, outputForThisScale, result);
         }
+
+        Core.MinMaxLocResult maxMin = Core.minMaxLoc(result);
+        System.out.println(maxMin.maxVal);
+
+        Core.convertScaleAbs(result, result);
+
+        maxMin = Core.minMaxLoc(result);
+        System.out.println(maxMin.minVal);
+        System.out.println(maxMin.maxVal);
 
         String outputFilename = "resources/output.png";
         Highgui.imwrite(outputFilename, result);
