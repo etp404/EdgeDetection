@@ -8,6 +8,8 @@ import org.apache.commons.io.FilenameUtils;
 import java.io.File;
 
 public class EdgeDetectionDemo {
+    private static final int HEADLINE_PANEL_WIDTH = 1000;
+
     public static void main(String[] args) {
         System.loadLibrary("opencv_java249");
 
@@ -15,20 +17,37 @@ public class EdgeDetectionDemo {
         File folder = new File("resources/input");
         File[] listOfFiles = folder.listFiles();
 
-        int i = 1;
-        for (File inputImageFile : listOfFiles) {
-            System.out.println(i++ + " of " + listOfFiles.length);
+        for (int i = 0; i<4; i++) {
+            File inputImageFile = listOfFiles[i];
+            System.out.println(i + " of " + listOfFiles.length);
             Mat inputImage = Highgui.imread(inputImageFile.getAbsolutePath(), Highgui.CV_LOAD_IMAGE_GRAYSCALE);
             Mat result = getEdgeMap(inputImage);
+            int bestLeftEdge = getBestLeftEdge(result);
             Mat scaleMatrix = new Mat(inputImage.height(),inputImage.width(), CvType.CV_64F, new Scalar(Core.minMaxLoc(result).maxVal/255.0));
             Core.divide(result, scaleMatrix, result); //Not ideal: I only want to divide by a scalar.
 
             String inputFilename = "resources/results/" + FilenameUtils.removeExtension(inputImageFile.getName()) + "_input.png";
+            Core.rectangle(inputImage, new Point(bestLeftEdge,0), new Point (bestLeftEdge + HEADLINE_PANEL_WIDTH, inputImage.height()), new Scalar(0), 10);
             Highgui.imwrite(inputFilename, inputImage);
+
 
             String outputFilename = "resources/results/" + FilenameUtils.removeExtension(inputImageFile.getName()) + "_output.png";
             Highgui.imwrite(outputFilename, result);
         }
+    }
+
+    private static int getBestLeftEdge(Mat result) {
+        System.out.println("Optimizing position of headline.");
+        int bestLeftEdge = 0;
+        Double lowestInterestScore = null;
+        for (int x=0; x<result.width()-HEADLINE_PANEL_WIDTH; x++) {
+            double interestScore = Core.sumElems(result.colRange(x, x + HEADLINE_PANEL_WIDTH)).val[0];
+            if (lowestInterestScore == null || interestScore < lowestInterestScore){
+                lowestInterestScore = interestScore;
+                bestLeftEdge = x;
+            }
+        }
+        return bestLeftEdge;
     }
 
     private static Mat getEdgeMap(Mat inputImage) {
