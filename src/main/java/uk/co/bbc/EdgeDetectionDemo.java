@@ -7,6 +7,10 @@ import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 
+/*
+Caveat: This code needs a good tidy up if it proceeds to production. As it is, it's more of a spike.
+ */
+
 public class EdgeDetectionDemo {
     private static final int HEADLINE_PANEL_WIDTH = 1200;
 
@@ -17,18 +21,22 @@ public class EdgeDetectionDemo {
         File folder = new File("resources/input");
         File[] listOfFiles = folder.listFiles();
 
-        for (int i = 0; i<5
-				                              ; i++) {
+        for (int i = 55; i<60; i++) {
             File inputImageFile = listOfFiles[i];
-            System.out.println(i+1 + " of " + listOfFiles.length);
-            Mat inputImage = Highgui.imread(inputImageFile.getAbsolutePath(), Highgui.CV_LOAD_IMAGE_GRAYSCALE);
+			Mat inputImage = Highgui.imread(inputImageFile.getAbsolutePath(), Highgui.CV_LOAD_IMAGE_GRAYSCALE);
+			System.out.println(i+1 + " of " + listOfFiles.length);
+
+			if (inputImage.height() > inputImage.width()) {
+				continue;
+			}
+
             Mat result = getEdgeMap(inputImage);
             int bestLeftEdge = getBestLeftEdge(result);
             Mat scaleMatrix = new Mat(inputImage.height(),inputImage.width(), CvType.CV_64F, new Scalar(Core.minMaxLoc(result).maxVal/255.0));
             Core.divide(result, scaleMatrix, result); //Not ideal: I only want to divide by a scalar.
 
-//            String outputFilename = "resources/results/" + FilenameUtils.removeExtension(inputImageFile.getName()) + "_output.png";
-//            Highgui.imwrite(outputFilename, result);
+            String outputFilename = "resources/results/" + FilenameUtils.removeExtension(inputImageFile.getName()) + "_edgeMap.png";
+            Highgui.imwrite(outputFilename, result);
 
 			Mat originalImage = Highgui.imread(inputImageFile.getAbsolutePath(), Highgui.CV_LOAD_IMAGE_COLOR);
 
@@ -67,11 +75,12 @@ public class EdgeDetectionDemo {
         inputImage.convertTo(inputImage64, CvType.CV_64F);
 
         Mat result = new Mat(inputImage64.height(), inputImage64.width(), inputImage64.depth());
-        for (double lambda = 5; lambda <10; lambda+=10) {
+        for (double lambda = 1; lambda <=5; lambda+=2) {
             double sigma = lambda;
             Size size = new Size(2*sigma, 2*sigma);
             Mat outputForThisScale = new Mat(inputImage64.height(), inputImage64.width(), inputImage64.depth());
             for (double orientation = 0; orientation < 2*Math.PI; orientation+=Math.PI/4) {
+				System.out.println("Lamdba :" + lambda + ". Orientation:" + orientation);
                 Mat kernel = Imgproc.getGaborKernel(size, sigma, orientation, lambda, 1);
                 Mat output = new Mat(inputImage64.height(), inputImage64.width(), inputImage64.depth());
                 Imgproc.filter2D(inputImage64, output, -1, kernel);
